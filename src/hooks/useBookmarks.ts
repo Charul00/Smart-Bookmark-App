@@ -10,14 +10,18 @@ export function useBookmarks(user: AuthUser) {
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const pageRef = useRef(1);
+  const fetchInFlightRef = useRef(false);
 
   const fetchBookmarks = useCallback(
     async (userId: string, pageToLoad = 1) => {
+      if (fetchInFlightRef.current) return;
+      fetchInFlightRef.current = true;
       setLoadingBookmarks(true);
       const from = (pageToLoad - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
-      const { data, error, count } = await supabase
+      try {
+        const { data, error, count } = await supabase
         .from("bookmarks")
         .select("*", { count: "exact" })
         .eq("user_id", userId)
@@ -33,8 +37,10 @@ export function useBookmarks(user: AuthUser) {
         setTotalCount(count ?? null);
         setHasMore(count ? to + 1 < count : false);
       }
-
-      setLoadingBookmarks(false);
+      } finally {
+        fetchInFlightRef.current = false;
+        setLoadingBookmarks(false);
+      }
     },
     []
   );
@@ -87,8 +93,10 @@ export function useBookmarks(user: AuthUser) {
     []
   );
 
+  const userId = user?.id ?? null;
+
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setBookmarks([]);
       setPage(1);
       pageRef.current = 1;
@@ -99,15 +107,15 @@ export function useBookmarks(user: AuthUser) {
 
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
-    void fetchBookmarks(user.id, 1);
-    channel = subscribeToRealtime(user.id);
+    void fetchBookmarks(userId, 1);
+    channel = subscribeToRealtime(userId);
 
     return () => {
       if (channel) {
         supabase.removeChannel(channel);
       }
     };
-  }, [user, fetchBookmarks, subscribeToRealtime]);
+  }, [userId, fetchBookmarks, subscribeToRealtime]);
 
   useEffect(() => {
     pageRef.current = page;

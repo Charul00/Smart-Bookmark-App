@@ -11,7 +11,7 @@ import { ToastContainer } from "@/components/ui/Toast";
 import { BookmarkForm } from "@/components/bookmarks/BookmarkForm";
 import { BookmarkGrid } from "@/components/bookmarks/BookmarkGrid";
 import { Pagination } from "@/components/bookmarks/Pagination";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { PAGE_SIZE } from "@/constants";
 
@@ -49,24 +49,25 @@ export default function Home() {
     showToast,
   });
 
-  // Show toast on auth state changes
-  useEffect(() => {
-    if (!user) return;
+  const showToastRef = useRef(showToast);
+  showToastRef.current = showToast;
 
+  // Show toast on auth state changes (subscribe once to avoid duplicate listeners)
+  useEffect(() => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN") {
-        showToast("Successfully signed in!", "success");
+        showToastRef.current("Successfully signed in!", "success");
       } else if (event === "SIGNED_OUT") {
-        showToast("Successfully signed out!", "success");
+        showToastRef.current("Successfully signed out!", "success");
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [user, showToast]);
+  }, []);
 
   const handlePreviousPage = () => {
     if (!user || page <= 1 || loadingBookmarks) return;

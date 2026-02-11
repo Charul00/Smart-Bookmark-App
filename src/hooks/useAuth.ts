@@ -7,6 +7,8 @@ export function useAuth() {
   const [initialising, setInitialising] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     const loadUser = async () => {
       try {
         const {
@@ -18,33 +20,32 @@ export function useAuth() {
           console.error("Error loading auth session", error);
         }
 
-        setUser(session?.user ?? null);
-        setInitialising(false);
-      } catch (error) {
-        console.error("Unexpected error loading auth session", error);
-        setInitialising(false);
+        if (mounted) {
+          setUser(session?.user ?? null);
+          setInitialising(false);
+        }
+      } catch (err) {
+        console.error("Unexpected error loading auth session", err);
+        if (mounted) setInitialising(false);
       }
     };
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
       const nextUser = session?.user ?? null;
       setUser(nextUser);
-
-      if (event === "SIGNED_IN" && nextUser && !user) {
-        setInitialising(false);
-      } else if (event === "SIGNED_OUT" && !nextUser && user) {
-        setInitialising(false);
-      }
+      setInitialising(false);
     });
 
     loadUser();
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
-  }, [user]);
+  }, []);
 
   const signInWithGoogle = async () => {
     await supabase.auth.signInWithOAuth({
