@@ -21,7 +21,7 @@ export function Header({ user, onSignOut }: HeaderProps) {
         <p className="mt-1 truncate text-xs text-slate-400">
           Signed in as{" "}
           <span className="font-medium">
-            {user.email ?? user.user_metadata?.full_name}
+            {user?.email ?? user?.user_metadata?.full_name ?? "User"}
           </span>
         </p>
       </div>
