@@ -132,11 +132,12 @@ create policy "Users can update their own bookmarks"
   with check (auth.uid() = user_id);
 ```
 
-### 5. Enable Realtime
+### 5. Enable Realtime (required for cross-tab sync)
 
-1. Go to **Database → Replication** in Supabase dashboard
-2. Enable replication for the `bookmarks` table
-3. This allows real-time updates to work
+1. Go to **Database → Replication** in your Supabase dashboard
+2. Find the **supabase_realtime** publication and ensure **bookmarks** is in the list of tables
+3. If **bookmarks** is not listed, click **Edit publication** and add the `bookmarks` table
+4. Without this, the bookmark list will not update in real time when you add/delete in another tab
 
 ---
 
