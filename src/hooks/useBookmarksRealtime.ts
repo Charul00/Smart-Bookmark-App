@@ -42,10 +42,16 @@ export function useBookmarksRealtime(
           event: "*",
           schema: "public",
           table: "bookmarks",
-          filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
-          const { eventType, new: newRow, old: oldRow } = payload;
+        (payload: {
+          eventType?: string;
+          new?: PayloadRecord | null;
+          old?: PayloadRecord | null;
+          old_record?: PayloadRecord | null;
+        }) => {
+          const eventType = String(payload.eventType ?? "").toUpperCase();
+          const newRow = payload.new ?? null;
+          const oldRow = payload.old ?? payload.old_record ?? null;
           const newRecord = newRow as PayloadRecord | null;
           const oldRecord = oldRow as PayloadRecord | null;
 
@@ -63,8 +69,15 @@ export function useBookmarksRealtime(
               setHasMore(true);
             }
           } else if (eventType === "DELETE") {
-            const deletedId = oldRecord?.id ?? (newRecord as PayloadRecord)?.id;
+            const deletedId =
+              oldRecord?.id ??
+              (newRecord as PayloadRecord)?.id ??
+              (oldRecord as Record<string, unknown>)?.id;
+            const deletedUserId =
+              oldRecord?.user_id ??
+              (newRecord as PayloadRecord)?.user_id;
             if (!deletedId) return;
+            if (deletedUserId && deletedUserId !== userId) return;
             setTotalCount((prev) => (prev != null && prev > 0 ? prev - 1 : prev));
             setBookmarks((prev) => prev.filter((b) => b.id !== deletedId));
           } else if (eventType === "UPDATE" && newRecord) {

@@ -134,10 +134,21 @@ create policy "Users can update their own bookmarks"
 
 ### 5. Enable Realtime (required for cross-tab sync)
 
-1. Go to **Database → Replication** in your Supabase dashboard
-2. Find the **supabase_realtime** publication and ensure **bookmarks** is in the list of tables
-3. If **bookmarks** is not listed, click **Edit publication** and add the `bookmarks` table
-4. Without this, the bookmark list will not update in real time when you add/delete in another tab
+**Without this step, the list will not update in other tabs until you refresh.**
+
+**Option A – SQL (fastest)**  
+In Supabase go to **SQL Editor → New query**, paste and run:
+
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.bookmarks;
+```
+
+**Option B – Dashboard**  
+1. Go to **Database → Replication**  
+2. Edit the **supabase_realtime** publication  
+3. Add the **bookmarks** table and save  
+
+See [REALTIME_SETUP.md](./REALTIME_SETUP.md) for more detail.
 
 ---
 
@@ -250,10 +261,26 @@ const channel = supabase
 
 **Key Learning**: 
 - Supabase Realtime respects RLS policies automatically
-- You need to enable replication on the table in Supabase dashboard
 - The realtime subscription must be set up after user authentication
 - Always filter events by `user_id` as an extra security measure
 - Clean up subscriptions when component unmounts to prevent memory leaks
+
+---
+
+### Problem 4: Two-tab real-time not working (add/delete in one tab, no update in the other)
+
+**Challenge**: Real-time worked for adding bookmarks (one tab showed the new bookmark in the other), but sometimes updates or deletes in one tab did not appear in another tab without a manual refresh.
+
+**Solution**: 
+- **Enable Replication in Supabase** so that the `bookmarks` table is part of the Realtime publication. Without this, the database does not broadcast INSERT/UPDATE/DELETE events to connected clients.
+- In Supabase: **Database → Replication** → ensure **bookmarks** is included in the **supabase_realtime** publication (add it if missing).
+- Or run in **SQL Editor**:  
+  `ALTER PUBLICATION supabase_realtime ADD TABLE public.bookmarks;`
+- For DELETE events, the payload can send only the primary key in `old` (depending on replica identity). The app handles both full `old` and minimal `old` (id only) so that deletes sync across tabs.
+
+**Key Learning**: 
+- Realtime in Supabase requires the table to be in the Realtime **publication** (replication). Until that is done, no postgres_changes events are sent, so other tabs will not update.
+- Once replication is enabled for `bookmarks`, both inserts and deletes sync across tabs without refresh.
 
 ---
 
