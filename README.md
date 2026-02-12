@@ -311,8 +311,8 @@ MIT
 
 ## Live Demo
 
-[Add your Vercel deployment URL here]
+https://smart-bookmark-app.vercel.app/
 
 ## Author
 
-Built by [Your Name]
+Built by Charul Chim
